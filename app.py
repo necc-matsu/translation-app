@@ -97,7 +97,7 @@ def translate_text(text, translator, manual_cache, auto_cache):
     return text
 
 def main():
-    st.title("サンプル名変換アプリ (日本語→英語)")
+    st.title("サンプル名変換 (日本語→英語)")
     st.write("※ファイル名は英数字のみにしてください。")
     global manual_cache, auto_cache
 
