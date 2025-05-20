@@ -176,7 +176,7 @@ def main():
             english_names = df["英語名"].dropna().astype(str).tolist()
             english_text = "\n".join(english_names).replace("`", "\\`").replace("\\", "\\\\")
 
-            st.markdown("#### \ud83d\udccb 英語名リストのコピー")
+            st.markdown("#### 英語名リストのコピー")
             st.text_area("コピー対象", english_text, height=200)
 
             copy_button_html = f"""
