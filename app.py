@@ -171,29 +171,5 @@ def main():
                 mime="application/zip"
             )
 
-        # ✅ 英語名コピー機能
-        if "英語名" in df.columns:
-            english_names = df["英語名"].dropna().astype(str).tolist()
-            english_text = "\n".join(english_names).replace("`", "\\`").replace("\\", "\\\\")
-
-            st.markdown("#### 英語名リストのコピー")
-            st.text_area("コピー対象", english_text, height=200)
-
-            copy_button_html = f"""
-            <button onclick=\"navigator.clipboard.writeText(`{english_text}`); alert('英語名をコピーしました！');\"
-                style=\"
-                    background-color:#4CAF50;
-                    color:white;
-                    padding:10px 16px;
-                    font-size:16px;
-                    border:none;
-                    border-radius:6px;
-                    cursor:pointer;
-                    margin-top:10px;\">
-                \u2705 クリックして英語名をコピー
-            </button>
-            """
-            st.markdown(copy_button_html, unsafe_allow_html=True)
-
 if __name__ == "__main__":
     main()
