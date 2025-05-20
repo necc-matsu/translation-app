@@ -197,7 +197,7 @@ def main():
         with col3:
             st.markdown(
         """
-        <div style="color: blue; font-size: 14px; font-weight: normal;">
+        <div style="color: blue; font-size: 16px; font-weight: normal;">
             プレビュー表示から<br>　コピー出来ます!!
         </div>
         """,
