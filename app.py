@@ -198,7 +198,7 @@ def main():
             st.markdown(
         """
         <div style="color: blue; font-size: 14px; font-weight: bold;">
-            プレビュー表示からコピペ出来ます！
+            プレビュー表示から<br>コピペ出来ます！
         </div>
         """,
         unsafe_allow_html=True
