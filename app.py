@@ -5,8 +5,9 @@ import json
 from unidecode import unidecode
 import deepl
 import io
+import zipfile
 
-# キャッシュ初期化（アップロードで上書き）
+# グローバルキャッシュ
 manual_cache = {}
 auto_cache = {}
 
@@ -29,11 +30,9 @@ def translate_text(text, translator, manual_cache, auto_cache):
     text = normalize_brackets(text)
     text = text.replace("℃", "C")
 
-    # 手動キャッシュ置換
     for jp, en in manual_cache.items():
         text = text.replace(jp, en)
 
-    # 日本語部分だけ抽出して翻訳 or キャッシュ参照
     japanese_parts = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
 
     for jp in japanese_parts:
@@ -60,7 +59,6 @@ def translate_text(text, translator, manual_cache, auto_cache):
 
         text = text.replace(jp, en)
 
-    # 残った日本語をローマ字に変換
     remaining = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
@@ -126,27 +124,25 @@ def main():
         st.success("翻訳が完了しました。")
         st.dataframe(df.head())
 
-        # 更新キャッシュをJSONとしてダウンロードできるように準備
-        cache_json_str = json.dumps({"manual": manual_cache, "auto": auto_cache}, ensure_ascii=False, indent=2)
-        st.download_button(
-            label="更新されたキャッシュファイルをダウンロード",
-            data=cache_json_str,
-            file_name="translation_cache_updated.json",
-            mime="application/json"
-        )
-
-        # 翻訳結果Excelファイルを保存してダウンロード
-        output_file = uploaded_file.name.rsplit(".", 1)[0] + "_translated.xlsx"
-        with io.BytesIO() as output_bytes:
-            with pd.ExcelWriter(output_bytes, engine="openpyxl") as writer:
+        # ZIPファイルにまとめて保存用のバイトストリームを作成
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            # Excelファイルをメモリ上に保存
+            excel_buffer = io.BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
-            data = output_bytes.getvalue()
-            st.download_button(
-                label="翻訳済みExcelファイルをダウンロード",
-                data=data,
-                file_name=output_file,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            zf.writestr(uploaded_file.name.rsplit(".", 1)[0] + "_translated.xlsx", excel_buffer.getvalue())
+
+            # キャッシュJSONを文字列化して書き込み
+            cache_json_str = json.dumps({"manual": manual_cache, "auto": auto_cache}, ensure_ascii=False, indent=2)
+            zf.writestr("translation_cache_updated.json", cache_json_str)
+
+        st.download_button(
+            label="翻訳済Excelとキャッシュをまとめてダウンロード (ZIP)",
+            data=zip_buffer.getvalue(),
+            file_name="translation_results.zip",
+            mime="application/zip"
+        )
 
 if __name__ == "__main__":
     main()
