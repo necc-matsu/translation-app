@@ -178,7 +178,6 @@ def main():
         st.dataframe(df)
 
         # 横並びにボタン配置
-        col1, col2, col3 = st.columns(3)
         col1, col2, col3 = st.columns([1, 1, 0.6])
         
         with col1:
