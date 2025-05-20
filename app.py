@@ -194,6 +194,8 @@ def main():
                 file_name="translation_cache.json",
                 mime="application/json"
             )
+        with col3:
+            st.write("プレビュー表示からコピペ出来ます！")
 
 if __name__ == "__main__":
     main()
