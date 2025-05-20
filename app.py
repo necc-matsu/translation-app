@@ -101,11 +101,11 @@ def main():
 
     global manual_cache, auto_cache
 
-    st.info("最初にキャッシュJSONファイルをアップロードしてください。")
+    st.sidebar.info("最初にキャッシュJSONファイルをアップロードしてください。")
     cache_file = st.file_uploader("キャッシュファイル(JSON)をアップロード", type=["json"])
     if cache_file is not None:
         manual_cache, auto_cache = load_cache_from_file(cache_file)
-        st.success("キャッシュファイルを読み込みました。")
+        st.sidebar.success("キャッシュファイルを読み込みました。")
 
     DEEPL_API_KEY = st.secrets.get("DEEPL_API_KEY")
     if not DEEPL_API_KEY:
