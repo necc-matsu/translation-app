@@ -15,7 +15,8 @@ def main():
     st.write(f"ファイルサイズ: {len(content)} bytes")
 
     try:
-        df = pd.read_excel(io.BytesIO(content), engine="openpyxl")
+        # engineはopenpyxl推奨ですが、指定なしで試すことも有効
+        df = pd.read_excel(io.BytesIO(content))  
         st.success("ファイルを正常に読み込みました。")
         st.dataframe(df.head())
     except Exception as e:
