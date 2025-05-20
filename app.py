@@ -179,7 +179,7 @@ def main():
 
         # 横並びにボタン配置
         col1, col2, col3 = st.columns(3)
-        col1, col2, col3 = st.columns([1, 1, 1])
+        col1, col2, col3 = st.columns([1, 1, 0.6])
         
         with col1:
             st.download_button(
