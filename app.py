@@ -3,25 +3,33 @@ import pandas as pd
 import re
 import json
 from unidecode import unidecode
-from pathlib import Path
+import os
 import deepl
 import io
+from pathlib import Path
 
-# キャッシュファイルのパス（ユーザーのデスクトップ上）
+# キャッシュファイルのパス（ユーザーのデスクトップ）
 CACHE_FILE = Path(r"C:\Users\1117\Desktop\python勉強\translation-app\translation_cache.json")
 
-@st.cache_resource
+# キャッシュファイルを毎回読み込む（@st.cache_resource は外す）
 def load_cache():
     if CACHE_FILE.exists():
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            cache = json.load(f)
-        return cache.get("manual", {}), cache.get("auto", {})
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+            return cache.get("manual", {}), cache.get("auto", {})
+        except Exception as e:
+            st.error(f"キャッシュファイルの読み込みでエラー: {e}")
+            return {}, {}
     else:
         return {}, {}
 
 def save_cache(manual_cache, auto_cache):
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump({"manual": manual_cache, "auto": auto_cache}, f, ensure_ascii=False, indent=2)
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"manual": manual_cache, "auto": auto_cache}, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        st.error(f"キャッシュファイルの保存でエラー: {e}")
 
 def normalize_brackets(text):
     return text.replace("(", "（").replace(")", "）")
@@ -38,16 +46,16 @@ def clean_text(text):
 def translate_text(text, translator, manual_cache, auto_cache):
     if pd.isna(text) or text.strip() == "":
         return ""
-
     text = str(text)
     text = normalize_brackets(text)
     text = text.replace("℃", "C")
 
-    # manual_cache のキーワードを部分一致で置換（先に適用）
+    # 手動キャッシュで置換（部分一致置換）
     for jp, en in manual_cache.items():
         if jp in text:
             text = text.replace(jp, en)
 
+    # 日本語部分のみ抽出して翻訳 or キャッシュ利用
     japanese_parts = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
 
     for jp in japanese_parts:
@@ -74,6 +82,7 @@ def translate_text(text, translator, manual_cache, auto_cache):
 
         text = text.replace(jp, en)
 
+    # まだ残る日本語をローマ字に置換
     remaining = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
@@ -83,7 +92,9 @@ def translate_text(text, translator, manual_cache, auto_cache):
 def main():
     st.title("Excel日本語→英語 翻訳アプリ (DeepL API使用)")
 
+    # キャッシュを毎回読み込む
     manual_cache, auto_cache = load_cache()
+    st.write("手動キャッシュ例:", list(manual_cache.items())[:3])  # 読み込み確認用表示
 
     DEEPL_API_KEY = st.secrets.get("DEEPL_API_KEY")
     if not DEEPL_API_KEY:
