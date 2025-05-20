@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import re
 import json
-from deep_translator import DeepL
 from unidecode import unidecode
 import os
+import deepl
 
-# キャッシュファイル名（ローカル保存用。クラウド環境では永続化されない点ご注意）
 CACHE_FILE = "translation_cache.json"
 
 @st.cache_resource
@@ -49,7 +48,7 @@ def translate_text(text, translator, manual_cache, auto_cache):
             en = auto_cache[jp]
         else:
             try:
-                en = translator.translate(jp)
+                en = translator.translate_text(jp, source_lang="JA", target_lang="EN-US").text
                 auto_cache[jp] = en
             except Exception:
                 en = japanese_to_romaji(jp)
@@ -68,18 +67,18 @@ def main():
 
     manual_cache, auto_cache = load_cache()
 
-    # SecretsからAPIキー取得
     DEEPL_API_KEY = st.secrets.get("DEEPL_API_KEY")
     if not DEEPL_API_KEY:
         st.error("DEEPL_API_KEYがSecretsに登録されていません。設定してください。")
         st.stop()
+
+    translator = deepl.Translator(DEEPL_API_KEY)
 
     uploaded_file = st.file_uploader("翻訳するExcelファイルをアップロードしてください", type=["xlsx", "xls", "xlsm"])
     if not uploaded_file:
         st.info("ファイルをアップロードすると翻訳処理を開始します。")
         return
 
-    # Excel読み込み
     try:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
     except Exception as e:
@@ -89,8 +88,7 @@ def main():
     st.write("アップロードされたデータのプレビュー")
     st.dataframe(df.head())
 
-    target_col = "サンプル名"  # 必要に応じてここを変更または選択UI追加
-
+    target_col = "サンプル名"
     if target_col not in df.columns:
         st.error(f"列 '{target_col}' がファイルに存在しません。")
         return
@@ -102,22 +100,17 @@ def main():
     if st.button("翻訳を実行"):
         st.info("翻訳処理中...しばらくお待ちください。")
 
-        translator = DeepL(api_key=DEEPL_API_KEY, source="JA", target="EN")
-
         translated_map = {}
         for text in texts_to_translate:
             translated_map[text] = translate_text(text, translator, manual_cache, auto_cache)
 
-        # 翻訳結果をDataFrameに反映
         df["英語名"] = df[target_col].map(translated_map)
 
-        # キャッシュ保存
         save_cache(manual_cache, auto_cache)
 
         st.success("翻訳が完了しました。")
         st.dataframe(df.head())
 
-        # ダウンロード用にExcelファイルを作成
         output_file = uploaded_file.name.rsplit(".", 1)[0] + "_translated.xlsx"
         df.to_excel(output_file, index=False, engine="openpyxl")
 
