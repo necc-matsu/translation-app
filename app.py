@@ -197,8 +197,8 @@ def main():
         with col3:
             st.markdown(
         """
-        <div style="color: blue; font-size: 14px; font-weight: bold;">
-            プレビュー表示から<br>　コピペ出来ます!!
+        <div style="color: blue; font-size: 14px; font-weight: normal;">
+            プレビュー表示から<br>　コピー出来ます!!
         </div>
         """,
         unsafe_allow_html=True
