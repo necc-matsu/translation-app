@@ -3,15 +3,14 @@ import pandas as pd
 import re
 import json
 from unidecode import unidecode
-import os
+from pathlib import Path
 import deepl
 import io
-from pathlib import Path
 
-# キャッシュファイルのパス（デスクトップ上）
+# キャッシュファイルのパス（ユーザーのデスクトップ上）
 CACHE_FILE = Path(r"C:\Users\1117\Desktop\python勉強\translation-app\translation_cache.json")
 
-# キャッシュ読み込み関数
+@st.cache_resource
 def load_cache():
     if CACHE_FILE.exists():
         with open(CACHE_FILE, "r", encoding="utf-8") as f:
@@ -20,16 +19,10 @@ def load_cache():
     else:
         return {}, {}
 
-# キャッシュ保存関数
 def save_cache(manual_cache, auto_cache):
-    CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump({"manual": manual_cache, "auto": auto_cache}, f, ensure_ascii=False, indent=2)
 
-# グローバルでキャッシュを読み込み
-manual_cache, auto_cache = load_cache()
-
-# 正規化関数などの補助関数
 def normalize_brackets(text):
     return text.replace("(", "（").replace(")", "）")
 
@@ -42,16 +35,18 @@ def clean_text(text):
     text = re.sub(r'[^\u3040-\u30FF\u4E00-\u9FFFa-zA-Z0-9\s（）.,\-＋()・]', '', text)
     return text.strip()
 
-# 翻訳処理
 def translate_text(text, translator, manual_cache, auto_cache):
     if pd.isna(text) or text.strip() == "":
         return ""
+
     text = str(text)
     text = normalize_brackets(text)
     text = text.replace("℃", "C")
 
+    # manual_cache のキーワードを部分一致で置換（先に適用）
     for jp, en in manual_cache.items():
-        text = text.replace(jp, en)
+        if jp in text:
+            text = text.replace(jp, en)
 
     japanese_parts = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
 
@@ -85,11 +80,10 @@ def translate_text(text, translator, manual_cache, auto_cache):
 
     return text
 
-# Streamlitアプリ本体
 def main():
-    global manual_cache, auto_cache
-
     st.title("Excel日本語→英語 翻訳アプリ (DeepL API使用)")
+
+    manual_cache, auto_cache = load_cache()
 
     DEEPL_API_KEY = st.secrets.get("DEEPL_API_KEY")
     if not DEEPL_API_KEY:
@@ -118,7 +112,6 @@ def main():
         return
 
     texts_to_translate = df[target_col].dropna().unique().tolist()
-    st.write(f"翻訳対象（{target_col}列）: {len(texts_to_translate)}件")
 
     if st.button("翻訳を実行"):
         st.info("翻訳処理中...しばらくお待ちください。")
