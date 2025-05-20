@@ -195,7 +195,15 @@ def main():
                 mime="application/json"
             )
         with col3:
-            st.markdown("プレビュー表示からコピペ出来ます！")
+            st.markdown(
+        """
+        <div style="color: blue; font-size: 14px; font-weight: bold;">
+            プレビュー表示からコピペ出来ます！
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 if __name__ == "__main__":
     main()
