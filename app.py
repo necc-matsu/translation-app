@@ -111,7 +111,6 @@ def main():
         return
 
     texts_to_translate = df[target_col].dropna().unique().tolist()
-    st.write(f"翻訳対象テキスト（{target_col}列）")
     st.write(texts_to_translate)
 
     if st.button("翻訳を実行"):
