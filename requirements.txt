@@ -3,3 +3,4 @@ pandas
 openpyxl
 deep-translator
 unidecode
+deepl
