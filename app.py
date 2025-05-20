@@ -138,7 +138,6 @@ def main():
     texts_to_translate = df[target_col].dropna().unique().tolist()
 
     if st.button("翻訳を実行"):
-        st.info("翻訳処理中...しばらくお待ちください。")
 
         translated_map = {}
         for text in texts_to_translate:
