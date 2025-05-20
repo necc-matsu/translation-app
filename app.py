@@ -9,8 +9,8 @@ import io
 from pathlib import Path
 
 # キャッシュファイルのパス（ユーザーのデスクトップ上）
-desktop_path = Path.home() / r""C:\Users\1117\Desktop\python勉強\translation-app\translation_cache.json""
-CACHE_FILE = desktop_path / "translation_cache.json"
+
+CACHE_FILE = Path(r"C:\Users\1117\Desktop\python勉強\translation-app\translation_cache.json")
 
 @st.cache_resource
 def load_cache():
