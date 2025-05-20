@@ -10,7 +10,6 @@ import deepl
 MANUAL_CACHE_FILE = "manual_cache.json"
 AUTO_CACHE_FILE = "auto_cache.json"
 
-# キャッシュ読み込み（手動・自動）
 def load_cache():
     manual_cache = {}
     auto_cache = {}
@@ -22,7 +21,6 @@ def load_cache():
             auto_cache = json.load(f)
     return manual_cache, auto_cache
 
-# キャッシュ保存（手動・自動）
 def save_cache(manual_cache, auto_cache):
     with open(MANUAL_CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(manual_cache, f, ensure_ascii=False, indent=2)
@@ -48,11 +46,9 @@ def translate_text(text, translator, manual_cache, auto_cache):
     text = normalize_brackets(text)
     text = text.replace("℃", "C")
 
-    # 手動キャッシュにあればそれを優先
     if text in manual_cache:
         return manual_cache[text]
 
-    # 部分的に置換（手動キャッシュキーの一部に含まれる場合も置換可能にしたいなら拡張可能）
     for jp, en in manual_cache.items():
         if jp in text:
             text = text.replace(jp, en)
@@ -74,7 +70,6 @@ def translate_text(text, translator, manual_cache, auto_cache):
             en = auto_cache[jp]
         else:
             try:
-                st.write(f"翻訳対象: '{jp}'（長さ: {len(jp)} / {len(jp.encode('utf-8'))}バイト）")
                 result = translator.translate_text(jp, source_lang="JA", target_lang="EN-US")
                 en = result.text
                 auto_cache[jp] = en
@@ -101,7 +96,7 @@ def manual_cache_editor(manual_cache):
         if submitted:
             if key.strip() and val.strip():
                 manual_cache[key.strip()] = val.strip()
-                save_cache(manual_cache, {})  # 自動キャッシュは空でOK（更新しない）
+                save_cache(manual_cache, {})  # 自動キャッシュは更新なし
                 st.sidebar.success(f"キャッシュを更新しました: '{key}' → '{val}'")
 
     st.sidebar.markdown("---")
@@ -109,7 +104,7 @@ def manual_cache_editor(manual_cache):
     st.sidebar.write(manual_cache)
 
 def main():
-    st.title("Excel日本語→英語 翻訳アプリ（DeepL + 手動キャッシュ対応）")
+    st.title("Excelサンプル名列の日本語→英語 翻訳アプリ（DeepL + 手動キャッシュ対応）")
 
     manual_cache, auto_cache = load_cache()
 
@@ -136,19 +131,20 @@ def main():
     st.write("アップロードされたデータのプレビュー")
     st.dataframe(df.head())
 
-    # 翻訳対象の列を選択できるUI
-    target_col = st.selectbox("翻訳する列を選択してください", df.columns)
+    if "サンプル名" not in df.columns:
+        st.error("Excelファイルに「サンプル名」列が見つかりません。列名を確認してください。")
+        return
 
     if st.button("翻訳を実行"):
         st.info("翻訳処理中...しばらくお待ちください。")
 
-        texts_to_translate = df[target_col].dropna().unique().tolist()
+        texts_to_translate = df["サンプル名"].dropna().unique().tolist()
         translated_map = {}
 
         for text in texts_to_translate:
             translated_map[text] = translate_text(text, translator, manual_cache, auto_cache)
 
-        df["英語訳"] = df[target_col].map(translated_map)
+        df["英語訳"] = df["サンプル名"].map(translated_map)
 
         save_cache(manual_cache, auto_cache)
 
