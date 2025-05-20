@@ -156,7 +156,11 @@ def main():
             st.warning(f"キャッシュの保存に失敗しました: {e}")
 
         st.success("翻訳が完了しました。")
-
+       
+        # 翻訳された結果を画面に表示（追加）
+        st.write("翻訳後のExcelプレビュー")
+        st.dataframe(df)
+        
         # ダウンロード用ZIP作成（Excelとキャッシュをまとめて）
         with io.BytesIO() as buffer:
             with zipfile.ZipFile(buffer, "w") as zipf:
