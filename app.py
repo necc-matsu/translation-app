@@ -99,6 +99,8 @@ def translate_text(text, translator, manual_cache, auto_cache):
 def main():
     st.title("サンプル名変換 (日本語→英語)")
     st.write("※ファイル名は英数字のみにしてください。")
+    st.write("「サンプル名」を含む列のみ変換します。")
+    
     global manual_cache, auto_cache
 
     st.sidebar.info("最初にキャッシュ(JSONファイル)をアップロードしてください。")
