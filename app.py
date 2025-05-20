@@ -190,7 +190,7 @@ def main():
             )
         with col2:
             st.download_button(
-                label="キャッシュファイルをダウンロード",
+                label="キャッシュをダウンロード",
                 data=cache_bytes_io,
                 file_name="translation_cache.json",
                 mime="application/json"
