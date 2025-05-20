@@ -10,9 +10,12 @@ def main():
         st.info("ファイルをアップロードすると内容を表示します。")
         return
 
+    st.write(f"ファイル名: {uploaded_file.name}")
+    content = uploaded_file.read()
+    st.write(f"ファイルサイズ: {len(content)} bytes")
+
     try:
-        # ファイルのバイナリデータをBytesIOで包んでPandasに渡す
-        df = pd.read_excel(io.BytesIO(uploaded_file.read()))
+        df = pd.read_excel(io.BytesIO(content))
         st.success("ファイルを正常に読み込みました。")
         st.dataframe(df.head())
     except Exception as e:
