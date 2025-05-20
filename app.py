@@ -97,11 +97,11 @@ def translate_text(text, translator, manual_cache, auto_cache):
     return text
 
 def main():
-    st.title("Excel日本語→英語 翻訳アプリ (DeepL API使用)")
-
+    st.title("サンプル名変換アプリ (日本語→英語)")
+    st.write("※ファイル名は英数字のみにしてください。")
     global manual_cache, auto_cache
 
-    st.sidebar.info("最初にキャッシュJSONファイルをアップロードしてください。")
+    st.sidebar.info("最初にキャッシュ(JSONファイル)をアップロードしてください。")
     cache_file = st.sidebar.file_uploader("キャッシュファイル(JSON)をアップロード", type=["json"])
     if cache_file is not None:
         manual_cache, auto_cache = load_cache_from_file(cache_file)
