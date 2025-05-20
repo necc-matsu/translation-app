@@ -178,7 +178,9 @@ def main():
         st.dataframe(df)
 
         # 横並びにボタン配置
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
+        col1, col2, col3 = st.columns([1, 1, 0.2])
+        
         with col1:
             st.download_button(
                 label="翻訳済みExcelをダウンロード",
