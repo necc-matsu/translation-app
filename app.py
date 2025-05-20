@@ -40,29 +40,34 @@ def translate_text(text, translator, manual_cache, auto_cache):
     for jp, en in manual_cache.items():
         text = text.replace(jp, en)
 
-    japanese_parts = extract_japanese_parts(text)
+    japanese_parts = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
 
     for jp in japanese_parts:
+        jp = jp.strip()
+        jp = re.sub(r'[\x00-\x1F\x7F]', '', jp)  # 制御文字除去
+
+        if len(jp) > 2000:
+            st.warning(f"長すぎる文字列はスキップ: {jp[:50]}...")
+            en = japanese_to_romaji(jp)
+            auto_cache[jp] = en
+            continue
+
         if jp in auto_cache:
             en = auto_cache[jp]
         else:
-            if len(jp) > 2000:  # DeepLの文字数制限(約5000文字)をかなり余裕持って短縮
-                st.warning(f"文字列が長すぎるため省略します: {jp[:50]}...")
-                en = japanese_to_romaji(jp)
-                auto_cache[jp] = en
-                continue
             try:
+                st.write(f"翻訳対象テキスト: {jp}")
                 en = translator.translate_text(jp, source_lang="JA", target_lang="EN-US").text
                 auto_cache[jp] = en
             except Exception as e:
-                error_msg = f"DeepL翻訳エラー: '{jp}' の翻訳に失敗しました。例外: {e}"
-                st.error(error_msg)
-                print(error_msg)
+                st.error(f"DeepL翻訳エラー: '{jp}' の翻訳に失敗しました。例外: {e}")
                 en = japanese_to_romaji(jp)
                 auto_cache[jp] = en
+
         text = text.replace(jp, en)
 
-    remaining = extract_japanese_parts(text)
+    # 未翻訳の日本語が残っていたらローマ字に
+    remaining = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
 
