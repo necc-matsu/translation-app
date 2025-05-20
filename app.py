@@ -3,9 +3,9 @@ import pandas as pd
 import io
 
 def main():
-    st.title("Excelファイル読み込みテスト")
+    st.title("Excelファイル読み込みテスト (.xlsm対応)")
 
-    uploaded_file = st.file_uploader("Excelファイルをアップロードしてください", type=["xlsx", "xls", "xlsm"])
+    uploaded_file = st.file_uploader("Excelファイル（.xlsx, .xlsmなど）をアップロードしてください", type=["xlsx", "xls", "xlsm"])
     if uploaded_file is None:
         st.info("ファイルをアップロードすると内容を表示します。")
         return
@@ -15,7 +15,7 @@ def main():
     st.write(f"ファイルサイズ: {len(content)} bytes")
 
     try:
-        df = pd.read_excel(io.BytesIO(content))
+        df = pd.read_excel(io.BytesIO(content), engine="openpyxl")
         st.success("ファイルを正常に読み込みました。")
         st.dataframe(df.head())
     except Exception as e:
