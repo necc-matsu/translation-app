@@ -155,7 +155,7 @@ def main():
         except Exception as e:
             st.warning(f"キャッシュの保存に失敗しました: {e}")
 
-        st.success("翻訳が完了しました。")
+        st.toast("翻訳が完了しました。", icon="✅")
        
         # 翻訳された結果を画面に表示（追加）
         st.write("翻訳後のExcelプレビュー")
