@@ -181,5 +181,32 @@ def main():
                 mime="application/zip"
             )
 
+            # 英語名のみをコピーできるようにボタンで提供（1クリックコピー）
+        if "英語名" in df.columns:
+            english_names = df["英語名"].dropna().astype(str).tolist()
+            english_text = "\n".join(english_names).replace("`", "\\`")  # JSエラー回避用
+
+            st.markdown("#### 📋 英語名リストのコピー")
+            st.text_area("コピー対象", english_text, height=200)
+
+            copy_button = f"""
+            <button 
+                onclick="navigator.clipboard.writeText(`{english_text}`); 
+                         alert('英語名リストをコピーしました！');"
+                style="
+                    background-color: #4CAF50;
+                    color: white;
+                    padding: 10px 16px;
+                    font-size: 16px;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    margin-top: 10px;
+                ">
+                ✅ クリックして英語名をコピー
+            </button>
+            """
+            st.markdown(copy_button, unsafe_allow_html=True)
+
 if __name__ == "__main__":
     main()
