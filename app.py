@@ -5,7 +5,6 @@ import json
 from unidecode import unidecode
 import io
 from pathlib import Path
-import zipfile
 import deepl
 
 # キャッシュファイルのパス（初期値は空、アップロードファイルから読み込み）
@@ -77,7 +76,7 @@ def translate_text(text, translator, manual_cache, auto_cache):
 
         text = text.replace(jp, en)
 
-    remaining = re.findall(r'[\u3040-\u30FF\u9FFF]+', text)
+    remaining = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
 
@@ -96,6 +95,21 @@ def translate_text(text, translator, manual_cache, auto_cache):
 def main():
     st.title("サンプル名変換 (日本語→英語)")
     st.write("※ファイル名は英数字のみにしてください。「サンプル名」を含む列のみ変換します。")
+
+    # ここでボタンの余白を狭くするCSSを追加
+    st.markdown(
+        """
+        <style>
+        /* ボタンの左右マージンとパディングを縮小 */
+        div.stDownloadButton > button {
+            margin-left: 4px !important;
+            margin-right: 4px !important;
+            padding: 6px 12px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
     global manual_cache, auto_cache
 
