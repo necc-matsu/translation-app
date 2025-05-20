@@ -50,7 +50,9 @@ def translate_text(text, translator, manual_cache, auto_cache):
                 en = translator.translate_text(jp, source_lang="JA", target_lang="EN-US").text
                 auto_cache[jp] = en
             except Exception as e:
-                st.error(f"DeepL翻訳エラー: {jp} => {e}")
+                error_msg = f"DeepL翻訳エラー: '{jp}' の翻訳に失敗しました。例外: {e}"
+                st.error(error_msg)
+                print(error_msg)
                 en = japanese_to_romaji(jp)
                 auto_cache[jp] = en
         text = text.replace(jp, en)
