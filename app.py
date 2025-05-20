@@ -104,7 +104,7 @@ def manual_cache_editor(manual_cache):
     st.sidebar.write(manual_cache)
 
 def main():
-    st.title("Excelサンプル名列の日本語→英語 翻訳アプリ（DeepL + 手動キャッシュ対応）")
+    st.title("Excelサンプル名列の日本語→英語 翻訳アプリ")
 
     manual_cache, auto_cache = load_cache()
 
