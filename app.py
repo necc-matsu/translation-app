@@ -31,13 +31,12 @@ def extract_japanese_parts(text):
     return re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
 
 def translate_text(text, translator, manual_cache, auto_cache):
-    if pd.isna(text):
+    if pd.isna(text) or text.strip() == "":
         return ""
     text = str(text)
     text = normalize_brackets(text)
     text = text.replace("℃", "C")
 
-    # 手動キャッシュによる置換
     for jp, en in manual_cache.items():
         text = text.replace(jp, en)
 
@@ -50,12 +49,12 @@ def translate_text(text, translator, manual_cache, auto_cache):
             try:
                 en = translator.translate_text(jp, source_lang="JA", target_lang="EN-US").text
                 auto_cache[jp] = en
-            except Exception:
+            except Exception as e:
+                st.error(f"DeepL翻訳エラー: {jp} => {e}")
                 en = japanese_to_romaji(jp)
                 auto_cache[jp] = en
         text = text.replace(jp, en)
 
-    # 残った未翻訳の日本語をローマ字に置換
     remaining = extract_japanese_parts(text)
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
