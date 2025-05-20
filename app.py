@@ -3,11 +3,10 @@ import pandas as pd
 import re
 import json
 from unidecode import unidecode
-import os
-import deepl
 import io
 from pathlib import Path
 import zipfile
+import deepl
 
 # キャッシュファイルのパス（初期値は空、アップロードファイルから読み込み）
 manual_cache = {}
@@ -82,10 +81,8 @@ def translate_text(text, translator, manual_cache, auto_cache):
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
 
-    # 最後に / を _ に変換
     text = text.replace("/", "_")
 
-    # 丸数字を _1, _2, ... に変換
     maru_map = {
         "①": "_1", "②": "_2", "③": "_3", "④": "_4", "⑤": "_5",
         "⑥": "_6", "⑦": "_7", "⑧": "_8", "⑨": "_9", "⑩": "_10",
@@ -99,7 +96,7 @@ def translate_text(text, translator, manual_cache, auto_cache):
 def main():
     st.title("サンプル名変換 (日本語→英語)")
     st.write("※ファイル名は英数字のみにしてください。「サンプル名」を含む列のみ変換します。")
-    
+
     global manual_cache, auto_cache
 
     st.sidebar.info("最初にキャッシュ(JSONファイル)をアップロードしてください。")
@@ -137,18 +134,15 @@ def main():
     texts_to_translate = df[target_col].dropna().unique().tolist()
 
     if st.button("翻訳を実行"):
-
         translated_map = {}
         for text in texts_to_translate:
             translated_map[text] = translate_text(text, translator, manual_cache, auto_cache)
 
         df["英語名"] = df[target_col].map(translated_map)
 
-        # 上書き保存: 元のExcelファイル名に _translated を追加
         output_excel_name = uploaded_file.name.rsplit(".", 1)[0] + "_translated.xlsx"
         df.to_excel(output_excel_name, index=False, engine="openpyxl")
 
-        # キャッシュも同じ場所に保存（ただしストリームリット環境ではローカルパス不安定）
         cache_save_path = Path(output_excel_name).parent / "translation_cache.json"
         try:
             save_cache(manual_cache, auto_cache, cache_save_path)
@@ -156,20 +150,16 @@ def main():
             st.warning(f"キャッシュの保存に失敗しました: {e}")
 
         st.toast("翻訳が完了しました。", icon="✅")
-       
-        # 翻訳された結果を画面に表示（追加）
+
         st.write("翻訳後のExcelプレビュー")
         st.dataframe(df)
-        
-        # ダウンロード用ZIP作成（Excelとキャッシュをまとめて）
+
         with io.BytesIO() as buffer:
             with zipfile.ZipFile(buffer, "w") as zipf:
-                # Excelファイルをバイト化してZIPに追加
                 excel_bytes = io.BytesIO()
                 df.to_excel(excel_bytes, index=False, engine="openpyxl")
                 zipf.writestr(output_excel_name, excel_bytes.getvalue())
 
-                # キャッシュJSONを文字列化してZIPに追加
                 cache_json_str = json.dumps({"manual": manual_cache, "auto": auto_cache}, ensure_ascii=False, indent=2)
                 zipf.writestr("translation_cache.json", cache_json_str)
 
@@ -181,32 +171,29 @@ def main():
                 mime="application/zip"
             )
 
-            # 英語名のみをコピーできるようにボタンで提供（1クリックコピー）
+        # ✅ 英語名コピー機能
         if "英語名" in df.columns:
             english_names = df["英語名"].dropna().astype(str).tolist()
-            english_text = "\n".join(english_names).replace("`", "\\`")  # JSエラー回避用
+            english_text = "\n".join(english_names).replace("`", "\\`").replace("\\", "\\\\")
 
-            st.markdown("#### 📋 英語名リストのコピー")
+            st.markdown("#### \ud83d\udccb 英語名リストのコピー")
             st.text_area("コピー対象", english_text, height=200)
 
-            copy_button = f"""
-            <button 
-                onclick="navigator.clipboard.writeText(`{english_text}`); 
-                         alert('英語名リストをコピーしました！');"
-                style="
-                    background-color: #4CAF50;
-                    color: white;
-                    padding: 10px 16px;
-                    font-size: 16px;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    margin-top: 10px;
-                ">
-                ✅ クリックして英語名をコピー
+            copy_button_html = f"""
+            <button onclick=\"navigator.clipboard.writeText(`{english_text}`); alert('英語名をコピーしました！');\"
+                style=\"
+                    background-color:#4CAF50;
+                    color:white;
+                    padding:10px 16px;
+                    font-size:16px;
+                    border:none;
+                    border-radius:6px;
+                    cursor:pointer;
+                    margin-top:10px;\">
+                \u2705 クリックして英語名をコピー
             </button>
             """
-            st.markdown(copy_button, unsafe_allow_html=True)
+            st.markdown(copy_button_html, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
