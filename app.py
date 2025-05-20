@@ -82,6 +82,18 @@ def translate_text(text, translator, manual_cache, auto_cache):
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
 
+    # 最後に / を _ に変換
+    text = text.replace("/", "_")
+
+    # 丸数字を _1, _2, ... に変換
+    maru_map = {
+        "①": "_1", "②": "_2", "③": "_3", "④": "_4", "⑤": "_5",
+        "⑥": "_6", "⑦": "_7", "⑧": "_8", "⑨": "_9", "⑩": "_10",
+        "⑪": "_11", "⑫": "_12", "⑬": "_13", "⑭": "_14", "⑮": "_15"
+    }
+    for maru, repl in maru_map.items():
+        text = text.replace(maru, repl)
+
     return text
 
 def main():
