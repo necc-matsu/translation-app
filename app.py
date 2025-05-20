@@ -3,38 +3,12 @@ import pandas as pd
 import re
 import json
 from unidecode import unidecode
-import os
 import deepl
 import io
-from pathlib import Path
 
-# キャッシュファイルのパス
-CACHE_FILE = Path(r"C:\Users\1117\Desktop\python勉強\translation-app\translation_cache.json")
-
-# グローバルキャッシュ変数（初期値は空）
+# キャッシュ初期化（アップロードで上書き）
 manual_cache = {}
 auto_cache = {}
-
-def load_cache():
-    if CACHE_FILE.exists():
-        try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                cache = json.load(f)
-            return cache.get("manual", {}), cache.get("auto", {})
-        except Exception as e:
-            st.error(f"キャッシュファイルの読み込みエラー: {e}")
-            return {}, {}
-    else:
-        st.warning("キャッシュファイルが見つかりません。")
-        return {}, {}
-
-def save_cache():
-    global manual_cache, auto_cache
-    try:
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump({"manual": manual_cache, "auto": auto_cache}, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        st.error(f"キャッシュファイルの保存エラー: {e}")
 
 def normalize_brackets(text):
     return text.replace("(", "（").replace(")", "）")
@@ -48,28 +22,24 @@ def clean_text(text):
     text = re.sub(r'[^\u3040-\u30FF\u4E00-\u9FFFa-zA-Z0-9\s（）.,\-＋()・]', '', text)
     return text.strip()
 
-def translate_text(text, translator):
-    global manual_cache, auto_cache
-
+def translate_text(text, translator, manual_cache, auto_cache):
     if pd.isna(text) or text.strip() == "":
         return ""
-
     text = str(text)
     text = normalize_brackets(text)
     text = text.replace("℃", "C")
 
-    # 手動キャッシュの置換
+    # 手動キャッシュ置換
     for jp, en in manual_cache.items():
-        if jp in text:
-            text = text.replace(jp, en)
+        text = text.replace(jp, en)
 
+    # 日本語部分だけ抽出して翻訳 or キャッシュ参照
     japanese_parts = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
 
     for jp in japanese_parts:
         jp = clean_text(jp)
         if not jp:
             continue
-
         if len(jp.encode("utf-8")) > 4500:
             st.warning(f"翻訳スキップ（長すぎ）: {jp[:50]}...")
             en = japanese_to_romaji(jp)
@@ -90,7 +60,7 @@ def translate_text(text, translator):
 
         text = text.replace(jp, en)
 
-    # 残った日本語はローマ字化
+    # 残った日本語をローマ字に変換
     remaining = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
@@ -98,32 +68,33 @@ def translate_text(text, translator):
     return text
 
 def main():
-    global manual_cache, auto_cache
-
     st.title("Excel日本語→英語 翻訳アプリ (DeepL API使用)")
 
-    # 手動キャッシュ読み込みボタン
-    if st.button("キャッシュファイルを読み込む（手動）"):
-        manual_cache, auto_cache = load_cache()
-        st.success("キャッシュファイルを読み込みました。")
-        st.write("手動キャッシュ例:", list(manual_cache.items())[:5])
+    st.markdown("### 1. キャッシュファイルをアップロードしてください（無ければ空で進めます）")
+    uploaded_cache_file = st.file_uploader("キャッシュファイル（JSON）", type=["json"], key="cache_uploader")
 
-    DEEPL_API_KEY = st.secrets.get("DEEPL_API_KEY")
-    if not DEEPL_API_KEY:
-        st.error("DEEPL_API_KEYがSecretsに登録されていません。")
-        st.stop()
+    global manual_cache, auto_cache
+    if uploaded_cache_file is not None:
+        try:
+            cache_json = json.load(uploaded_cache_file)
+            manual_cache = cache_json.get("manual", {})
+            auto_cache = cache_json.get("auto", {})
+            st.success(f"キャッシュ読み込み成功: manual {len(manual_cache)}件, auto {len(auto_cache)}件")
+        except Exception as e:
+            st.error(f"キャッシュファイルの読み込みエラー: {e}")
+    else:
+        st.info("キャッシュファイルをアップロードしてください。")
 
-    translator = deepl.Translator(DEEPL_API_KEY)
-
-    uploaded_file = st.file_uploader("翻訳するExcelファイルをアップロードしてください", type=["xlsx", "xls", "xlsm"])
+    st.markdown("### 2. 翻訳するExcelファイルをアップロードしてください")
+    uploaded_file = st.file_uploader("Excelファイル", type=["xlsx", "xls", "xlsm"], key="excel_uploader")
     if not uploaded_file:
-        st.info("ファイルをアップロードすると翻訳処理を開始します。")
+        st.info("Excelファイルをアップロードすると翻訳できます。")
         return
 
     try:
         df = pd.read_excel(io.BytesIO(uploaded_file.read()), engine="openpyxl")
     except Exception as e:
-        st.error(f"Excelファイルの読み込みに失敗しました: {e}")
+        st.error(f"Excel読み込みエラー: {e}")
         return
 
     st.write("アップロードされたデータのプレビュー")
@@ -131,35 +102,48 @@ def main():
 
     target_col = "サンプル名"
     if target_col not in df.columns:
-        st.error(f"列 '{target_col}' がファイルに存在しません。")
+        st.error(f"列 '{target_col}' が存在しません。")
         return
 
-    texts_to_translate = df[target_col].dropna().unique().tolist()
+    DEEPL_API_KEY = st.secrets.get("DEEPL_API_KEY")
+    if not DEEPL_API_KEY:
+        st.error("DEEPL_API_KEYが設定されていません。")
+        return
+
+    translator = deepl.Translator(DEEPL_API_KEY)
 
     if st.button("翻訳を実行"):
-        if not manual_cache and not auto_cache:
-            st.warning("キャッシュが空です。先に「キャッシュファイルを読み込む」ボタンを押すことを推奨します。")
-
         st.info("翻訳処理中...しばらくお待ちください。")
 
+        texts_to_translate = df[target_col].dropna().unique().tolist()
         translated_map = {}
+
         for text in texts_to_translate:
-            translated_map[text] = translate_text(text, translator)
+            translated_map[text] = translate_text(text, translator, manual_cache, auto_cache)
 
         df["英語名"] = df[target_col].map(translated_map)
-
-        save_cache()
 
         st.success("翻訳が完了しました。")
         st.dataframe(df.head())
 
-        output_file = uploaded_file.name.rsplit(".", 1)[0] + "_translated.xlsx"
-        df.to_excel(output_file, index=False, engine="openpyxl")
+        # 更新キャッシュをJSONとしてダウンロードできるように準備
+        cache_json_str = json.dumps({"manual": manual_cache, "auto": auto_cache}, ensure_ascii=False, indent=2)
+        st.download_button(
+            label="更新されたキャッシュファイルをダウンロード",
+            data=cache_json_str,
+            file_name="translation_cache_updated.json",
+            mime="application/json"
+        )
 
-        with open(output_file, "rb") as f:
+        # 翻訳結果Excelファイルを保存してダウンロード
+        output_file = uploaded_file.name.rsplit(".", 1)[0] + "_translated.xlsx"
+        with io.BytesIO() as output_bytes:
+            with pd.ExcelWriter(output_bytes, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False)
+            data = output_bytes.getvalue()
             st.download_button(
                 label="翻訳済みExcelファイルをダウンロード",
-                data=f,
+                data=data,
                 file_name=output_file,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
