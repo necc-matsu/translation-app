@@ -8,10 +8,13 @@ import deepl
 import io
 from pathlib import Path
 
-# キャッシュファイルのパス（ユーザーのデスクトップ）
+# キャッシュファイルのパス
 CACHE_FILE = Path(r"C:\Users\1117\Desktop\python勉強\translation-app\translation_cache.json")
 
-# キャッシュファイルを毎回読み込む（@st.cache_resource は外す）
+# グローバルキャッシュ変数（初期値は空）
+manual_cache = {}
+auto_cache = {}
+
 def load_cache():
     if CACHE_FILE.exists():
         try:
@@ -19,17 +22,19 @@ def load_cache():
                 cache = json.load(f)
             return cache.get("manual", {}), cache.get("auto", {})
         except Exception as e:
-            st.error(f"キャッシュファイルの読み込みでエラー: {e}")
+            st.error(f"キャッシュファイルの読み込みエラー: {e}")
             return {}, {}
     else:
+        st.warning("キャッシュファイルが見つかりません。")
         return {}, {}
 
-def save_cache(manual_cache, auto_cache):
+def save_cache():
+    global manual_cache, auto_cache
     try:
         with open(CACHE_FILE, "w", encoding="utf-8") as f:
             json.dump({"manual": manual_cache, "auto": auto_cache}, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        st.error(f"キャッシュファイルの保存でエラー: {e}")
+        st.error(f"キャッシュファイルの保存エラー: {e}")
 
 def normalize_brackets(text):
     return text.replace("(", "（").replace(")", "）")
@@ -43,25 +48,28 @@ def clean_text(text):
     text = re.sub(r'[^\u3040-\u30FF\u4E00-\u9FFFa-zA-Z0-9\s（）.,\-＋()・]', '', text)
     return text.strip()
 
-def translate_text(text, translator, manual_cache, auto_cache):
+def translate_text(text, translator):
+    global manual_cache, auto_cache
+
     if pd.isna(text) or text.strip() == "":
         return ""
+
     text = str(text)
     text = normalize_brackets(text)
     text = text.replace("℃", "C")
 
-    # 手動キャッシュで置換（部分一致置換）
+    # 手動キャッシュの置換
     for jp, en in manual_cache.items():
         if jp in text:
             text = text.replace(jp, en)
 
-    # 日本語部分のみ抽出して翻訳 or キャッシュ利用
     japanese_parts = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
 
     for jp in japanese_parts:
         jp = clean_text(jp)
         if not jp:
             continue
+
         if len(jp.encode("utf-8")) > 4500:
             st.warning(f"翻訳スキップ（長すぎ）: {jp[:50]}...")
             en = japanese_to_romaji(jp)
@@ -82,7 +90,7 @@ def translate_text(text, translator, manual_cache, auto_cache):
 
         text = text.replace(jp, en)
 
-    # まだ残る日本語をローマ字に置換
+    # 残った日本語はローマ字化
     remaining = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
     for jp in remaining:
         text = text.replace(jp, japanese_to_romaji(jp))
@@ -90,11 +98,15 @@ def translate_text(text, translator, manual_cache, auto_cache):
     return text
 
 def main():
+    global manual_cache, auto_cache
+
     st.title("Excel日本語→英語 翻訳アプリ (DeepL API使用)")
 
-    # キャッシュを毎回読み込む
-    manual_cache, auto_cache = load_cache()
-    st.write("手動キャッシュ例:", list(manual_cache.items())[:3])  # 読み込み確認用表示
+    # 手動キャッシュ読み込みボタン
+    if st.button("キャッシュファイルを読み込む（手動）"):
+        manual_cache, auto_cache = load_cache()
+        st.success("キャッシュファイルを読み込みました。")
+        st.write("手動キャッシュ例:", list(manual_cache.items())[:5])
 
     DEEPL_API_KEY = st.secrets.get("DEEPL_API_KEY")
     if not DEEPL_API_KEY:
@@ -125,15 +137,18 @@ def main():
     texts_to_translate = df[target_col].dropna().unique().tolist()
 
     if st.button("翻訳を実行"):
+        if not manual_cache and not auto_cache:
+            st.warning("キャッシュが空です。先に「キャッシュファイルを読み込む」ボタンを押すことを推奨します。")
+
         st.info("翻訳処理中...しばらくお待ちください。")
 
         translated_map = {}
         for text in texts_to_translate:
-            translated_map[text] = translate_text(text, translator, manual_cache, auto_cache)
+            translated_map[text] = translate_text(text, translator)
 
         df["英語名"] = df[target_col].map(translated_map)
 
-        save_cache(manual_cache, auto_cache)
+        save_cache()
 
         st.success("翻訳が完了しました。")
         st.dataframe(df.head())
