@@ -27,8 +27,12 @@ def normalize_brackets(text):
 def japanese_to_romaji(text):
     return unidecode(text)
 
-def extract_japanese_parts(text):
-    return re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
+def clean_text(text):
+    # 絵文字や制御文字・改行・全角以外の不要文字を除去
+    text = re.sub(r'[\x00-\x1F\x7F]', '', text)  # 制御文字
+    text = re.sub(r'[\r\n\t]', ' ', text)  # 改行・タブ
+    text = re.sub(r'[^\u3040-\u30FF\u4E00-\u9FFFa-zA-Z0-9\s（）.,\-＋()・]', '', text)  # 記号など
+    return text.strip()
 
 def translate_text(text, translator, manual_cache, auto_cache):
     if pd.isna(text) or text.strip() == "":
@@ -43,11 +47,12 @@ def translate_text(text, translator, manual_cache, auto_cache):
     japanese_parts = re.findall(r'[\u3040-\u30FF\u4E00-\u9FFF]+', text)
 
     for jp in japanese_parts:
-        jp = jp.strip()
-        jp = re.sub(r'[\x00-\x1F\x7F]', '', jp)  # 制御文字除去
+        jp = clean_text(jp)
+        if not jp:
+            continue
 
-        if len(jp) > 2000:
-            st.warning(f"長すぎる文字列はスキップ: {jp[:50]}...")
+        if len(jp.encode("utf-8")) > 4500:
+            st.warning(f"翻訳スキップ（長すぎ）: {jp[:50]}...")
             en = japanese_to_romaji(jp)
             auto_cache[jp] = en
             continue
@@ -56,11 +61,12 @@ def translate_text(text, translator, manual_cache, auto_cache):
             en = auto_cache[jp]
         else:
             try:
-                st.write(f"翻訳対象テキスト: {jp}")
-                en = translator.translate_text(jp, source_lang="JA", target_lang="EN-US").text
+                st.write(f"翻訳対象: '{jp}'（長さ: {len(jp)} / {len(jp.encode('utf-8'))}バイト）")
+                result = translator.translate_text(jp, source_lang="JA", target_lang="EN-US")
+                en = result.text
                 auto_cache[jp] = en
             except Exception as e:
-                st.error(f"DeepL翻訳エラー: '{jp}' の翻訳に失敗しました。例外: {e}")
+                st.error(f"DeepL翻訳エラー: '{jp}' → 例外: {e}")
                 en = japanese_to_romaji(jp)
                 auto_cache[jp] = en
 
@@ -80,7 +86,7 @@ def main():
 
     DEEPL_API_KEY = st.secrets.get("DEEPL_API_KEY")
     if not DEEPL_API_KEY:
-        st.error("DEEPL_API_KEYがSecretsに登録されていません。設定してください。")
+        st.error("DEEPL_API_KEYがSecretsに登録されていません。")
         st.stop()
 
     translator = deepl.Translator(DEEPL_API_KEY)
