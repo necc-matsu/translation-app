@@ -105,7 +105,9 @@ def main():
     st.write("アップロードされたデータのプレビュー")
     st.dataframe(df.head())
 
-    target_col = "サンプル名"
+    st.write("翻訳対象の列を選んでください：")
+　　target_col = st.selectbox("列名を選択", df.columns.tolist())
+
     if target_col not in df.columns:
         st.error(f"列 '{target_col}' がファイルに存在しません。")
         return
